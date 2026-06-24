@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading; //used for the thread.sleep function to make the program wait for a certain amount of time before executing the next line of code
-// edit
+
 /***************
  * Florian Hauber
  * 1IHIF
