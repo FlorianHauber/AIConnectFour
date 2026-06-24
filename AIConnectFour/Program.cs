@@ -79,9 +79,9 @@ namespace ConnectFour
 
             for (int i = 0; i < board.GetLength(0); i++)
             {
-                for (int j = 0; j < board.Length(1); j++)
+                for (int j = 0; j < board.GetLength(1); j++)
                 {
-                    board[i, j] = 0;
+                    board[i, j] = " ";
                 }
             }
         }
