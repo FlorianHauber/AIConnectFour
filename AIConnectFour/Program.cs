@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading; //used for the thread.sleep function to make the program wait for a certain amount of time before executing the next line of code
-
+// edit
 /***************
  * Florian Hauber
  * 1IHIF
@@ -92,7 +92,7 @@ namespace ConnectFour
             bool draw = false;
 
             DisplayLogo(); //displays the logo and waits for the user to press a key before starting the game
-            
+
             while (!win && !draw)
             {
                 DisplayBoard(board.GetLength(0), board.GetLength(1)); //displays the current state of the board with the specified number of rows and columns and the pieces that have been placed on the board
