@@ -38,52 +38,89 @@ namespace ConnectFour
 
         static void TrainAI()
         {
-            bool win = false;
-            bool draw = false;
-            bool tortured = true;
-            int move = 0;
-            string stateKey = "";
+            bool gameOver = false;
+            int currentTrainingPlayer = 1;
 
-            while (!win && !draw)
-            {
-                stateKey = GetStateKey();
-            }
+            // Clear history from the previous game
+            gameHistory.Clear();
 
-            if (win)
+            while (!gameOver)
             {
-                qTable[stateKey][move] = 1.0;
-            }
-            else if (draw)
-            {
-                qTable[stateKey][move] = 0.5;
-            }
-            else
-            {
-                qTable[stateKey][move] = 0.0;
-            }
+                string stateKey = GetStateKey();
+                int availableCols = board.GetLength(1);
 
-            while (tortured)
-            {
-                stateKey = GetStateKey();
-                move = GetBestMove(stateKey);
-                board[move / 10, move % 10] = "X";
-                stateKey = GetStateKey();
-                move = GetBestMove(stateKey);
-                board[move / 10, move % 10] = "O";
-                stateKey = GetStateKey();
-                if (CheckWin(stateKey))
+                int moveCol = 0;
+
+                // Epsilon-Greedy: 10% chance to explore randomly, 90% chance to exploit best known move
+                Random rand = new Random();
+                if (rand.NextDouble() < 0.10)
                 {
-                    win = true;
-                    break;
+                    moveCol = rand.Next(0, availableCols);
                 }
-                if (CheckDraw(stateKey))
+                else
                 {
-                    draw = true;
-                    break;
+                    moveCol = GetBestMove(stateKey);
                 }
+
+                // Validate if column is full; if full, pick a random valid column
+                if (board[0, moveCol] != " ")
+                {
+                    List<int> openCols = new List<int>();
+                    for (int c = 0; c < availableCols; c++)
+                        if (board[0, c] == " ") openCols.Add(c);
+
+                    if (openCols.Count == 0) break; // Board is completely full
+                    moveCol = openCols[rand.Next(0, openCols.Count)];
+                }
+
+                // Save state and action to history before executing the move
+                gameHistory.Add((stateKey, moveCol));
+
+                // Drop the piece
+                string token = (currentTrainingPlayer == 1) ? "X" : "O";
+                DropTokenInColumn(moveCol, token);
+
+                // Check conditions
+                if (CheckWin(GetStateKey()))
+                {
+                    // Backpropagate rewards through game history
+                    // Winner gets 1.0, Loser gets 0.0
+                    for (int i = gameHistory.Count - 1; i >= 0; i--)
+                    {
+                        var step = gameHistory[i];
+                        bool isWinnerStep = (i % 2 == 0 && currentTrainingPlayer == 1) || (i % 2 != 0 && currentTrainingPlayer == 2);
+                        qTable[step.state][step.move] = isWinnerStep ? 1.0 : 0.0;
+                    }
+                    gameOver = true;
+                }
+                else if (CheckDraw(GetStateKey()))
+                {
+                    // Both get 0.5 for a draw
+                    foreach (var step in gameHistory)
+                    {
+                        qTable[step.state][step.move] = 0.5;
+                    }
+                    gameOver = true;
+                }
+
+                // Switch turns
+                currentTrainingPlayer = (currentTrainingPlayer == 1) ? 2 : 1;
             }
 
             ResetBoard();
+        }
+
+        // Helper method specifically for the AI to drop pieces into a column index (0-indexed)
+        static void DropTokenInColumn(int col, string token)
+        {
+            for (int r = board.GetLength(0) - 1; r >= 0; r--)
+            {
+                if (board[r, col] == " ")
+                {
+                    board[r, col] = token;
+                    break;
+                }
+            }
         }
 
         private static bool CheckDraw(string stateKey)
@@ -136,17 +173,24 @@ namespace ConnectFour
         {
             int bestMove = 0;
             double bestScore = double.MinValue;
+            List<int> bestMoves = new List<int>();
 
             for (int i = 0; i < qTable[stateKey].Length; i++)
             {
                 if (qTable[stateKey][i] > bestScore)
                 {
                     bestScore = qTable[stateKey][i];
-                    bestMove = i;
+                    bestMoves.Clear();
+                    bestMoves.Add(i);
+                }
+                else if (qTable[stateKey][i] == bestScore)
+                {
+                    bestMoves.Add(i);
                 }
             }
 
-            return bestMove;
+            Random r = new Random();
+            return bestMoves[r.Next(0, bestMoves.Count)];
         }
 
         static string GetStateKey()
@@ -163,7 +207,7 @@ namespace ConnectFour
 
             if (qTable.ContainsKey(stateKey) == false)
             {
-                qTable[stateKey] = new double[9]; //adds a new double to the table
+                qTable[stateKey] = new double[board.GetLength(1)]; // Matches chosen board width
             }
 
             return stateKey;
