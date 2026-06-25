@@ -42,7 +42,6 @@ namespace ConnectFour
             bool draw = false;
             bool tortured = true;
             int move = 0;
-            int col = 0;
             string stateKey = "";
 
             while (!win && !draw)
@@ -50,7 +49,104 @@ namespace ConnectFour
                 stateKey = GetStateKey();
             }
 
+            if (win)
+            {
+                qTable[stateKey][move] = 1.0;
+            }
+            else if (draw)
+            {
+                qTable[stateKey][move] = 0.5;
+            }
+            else
+            {
+                qTable[stateKey][move] = 0.0;
+            }
+
+            while (tortured)
+            {
+                stateKey = GetStateKey();
+                move = GetBestMove(stateKey);
+                board[move / 10, move % 10] = "X";
+                stateKey = GetStateKey();
+                move = GetBestMove(stateKey);
+                board[move / 10, move % 10] = "O";
+                stateKey = GetStateKey();
+                if (CheckWin(stateKey))
+                {
+                    win = true;
+                    break;
+                }
+                if (CheckDraw(stateKey))
+                {
+                    draw = true;
+                    break;
+                }
+            }
+
             ResetBoard();
+        }
+
+        private static bool CheckDraw(string stateKey)
+        {
+            for (int i = 0; i < board.GetLength(0); i++)
+            {
+                for (int j = 0; j < board.GetLength(1); j++)
+                {
+                    if (board[i, j] == " ")
+                    {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        private static bool CheckWin(string stateKey)
+        {
+            for (int i = 0; i < board.GetLength(0); i++)
+            {
+                for (int j = 0; j < board.GetLength(1); j++)
+                {
+                    if (board[i, j] == " ")
+                    {
+                        continue;
+                    }
+                    if (i + 3 < board.GetLength(0) && board[i, j] == board[i + 1, j] && board[i + 1, j] == board[i + 2, j] && board[i + 2, j] == board[i + 3, j])
+                    {
+                        return true;
+                    }
+                    if (j + 3 < board.GetLength(1) && board[i, j] == board[i, j + 1] && board[i, j + 1] == board[i, j + 2] && board[i, j + 2] == board[i, j + 3])
+                    {
+                        return true;
+                    }
+                    if (i + 3 < board.GetLength(0) && j + 3 < board.GetLength(1) && board[i, j] == board[i + 1, j + 1] && board[i + 1, j + 1] == board[i + 2, j + 2] && board[i + 2, j + 2] == board[i + 3, j + 3])
+                    {
+                        return true;
+                    }
+                    if (i + 3 < board.GetLength(0) && j - 3 >= 0 && board[i, j] == board[i + 1, j - 1] && board[i + 1, j - 1] == board[i + 2, j - 2] && board[i + 2, j - 2] == board[i + 3, j - 3])
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        private static int GetBestMove(string stateKey)
+        {
+            int bestMove = 0;
+            double bestScore = double.MinValue;
+
+            for (int i = 0; i < qTable[stateKey].Length; i++)
+            {
+                if (qTable[stateKey][i] > bestScore)
+                {
+                    bestScore = qTable[stateKey][i];
+                    bestMove = i;
+                }
+            }
+
+            return bestMove;
         }
 
         static string GetStateKey()
