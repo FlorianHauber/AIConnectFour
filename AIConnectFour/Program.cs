@@ -12,7 +12,7 @@ namespace ConnectFour
         static int playerTurn = 1;
 
         // Higher depth = smarter AI, but takes longer to think. 5-6 is perfect for console.
-        const int MAX_DEPTH = 5;
+        const int MAX_DEPTH = 10;
 
         static void Main(string[] args)
         {
