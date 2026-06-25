@@ -11,99 +11,187 @@ namespace ConnectFour
         public const int MAX_SIZE = 10;
         static int playerTurn = 1;
 
-        // Q-Table to store expected rewards for each state-action pair
-        static Dictionary<string, double[]> qTable = new Dictionary<string, double[]>();
-        // Stores game steps to backpropagate rewards after a match
-        static List<(string state, int move)> gameHistory = new List<(string, int)>();
+        // Higher depth = smarter AI, but takes longer to think. 5-6 is perfect for console.
+        const int MAX_DEPTH = 5;
 
         static void Main(string[] args)
         {
             AskForBoardSize();
 
-            // 500,000 games is the sweet spot for string-keys before running out of RAM
-            int trainingGames = 500000;
-            Console.WriteLine($"AI is training over {trainingGames:N0} games... please wait...");
-
-            for (int i = 0; i < trainingGames; i++)
-            {
-                TrainAI();
-            }
-
-            Console.Write("\nTraining complete! Press any key to play against the AI... ");
+            Console.WriteLine("AI Engine loaded successfully!");
+            Console.Write("Press any key to play against the AI... ");
             Console.ReadKey();
 
             PlayAgainstHuman();
         }
 
-        static void TrainAI()
+        static void PlayAgainstHuman()
         {
-            bool gameOver = false;
-            int currentTrainingPlayer = 1;
-            gameHistory.Clear();
+            bool win = false;
+            bool draw = false;
 
-            Random rand = new Random();
+            DisplayLogo();
 
-            while (!gameOver)
+            while (!win && !draw)
             {
-                string stateKey = GetStateKey();
-                int availableCols = board.GetLength(1);
-                int moveCol = 0;
+                DisplayBoard(board.GetLength(0), board.GetLength(1));
 
-                // Epsilon-Greedy: 10% chance to explore randomly, 90% to use best move
-                if (rand.NextDouble() < 0.10)
+                if (playerTurn == 1)
                 {
-                    moveCol = rand.Next(0, availableCols);
+                    // Human Turn
+                    GetInputAndPlacePiece();
                 }
                 else
                 {
-                    moveCol = GetBestMove(stateKey);
+                    // AI Turn (Player 2)
+                    Console.WriteLine("AI is calculating optimal strategy...");
+
+                    int aiMove = GetBestMoveLookahead();
+
+                    DropTokenInColumn(aiMove, "O");
+                    playerTurn = 1; // Hand control back to human
                 }
 
-                // If chosen column is full, fallback to a random valid column
-                if (board[0, moveCol] != " ")
-                {
-                    List<int> openCols = new List<int>();
-                    for (int c = 0; c < availableCols; c++)
-                    {
-                        if (board[0, c] == " ") openCols.Add(c);
-                    }
-
-                    if (openCols.Count == 0) break; // Tie / Board completely full
-                    moveCol = openCols[rand.Next(0, openCols.Count)];
-                }
-
-                gameHistory.Add((stateKey, moveCol));
-
-                string token = (currentTrainingPlayer == 1) ? "X" : "O";
-                DropTokenInColumn(moveCol, token);
-
-                string nextStateKey = GetStateKey();
-
-                if (CheckWin())
-                {
-                    // Winner gets 1.0, Loser gets 0.0
-                    for (int i = gameHistory.Count - 1; i >= 0; i--)
-                    {
-                        var step = gameHistory[i];
-                        bool isWinnerStep = (i % 2 == 0 && currentTrainingPlayer == 1) || (i % 2 != 0 && currentTrainingPlayer == 2);
-                        qTable[step.state][step.move] = isWinnerStep ? 1.0 : 0.0;
-                    }
-                    gameOver = true;
-                }
-                else if (CheckDraw())
-                {
-                    // Split points on a draw
-                    foreach (var step in gameHistory)
-                    {
-                        qTable[step.state][step.move] = 0.5;
-                    }
-                    gameOver = true;
-                }
-
-                currentTrainingPlayer = (currentTrainingPlayer == 1) ? 2 : 1;
+                win = CheckWin();
+                draw = CheckDraw();
             }
 
-            ResetBoard();
+            DisplayBoard(board.GetLength(0), board.GetLength(1));
+            PrintEndMessage(win, draw);
+        }
+
+        // Uses Minimax with Alpha-Beta Pruning to find the best move
+        private static int GetBestMoveLookahead()
+        {
+            int cols = board.GetLength(1);
+            int bestMove = 0;
+            int bestScore = int.MinValue;
+
+            // Simple heuristic: evaluate middle columns first for massive speed boost in pruning
+            List<int> colOrder = new List<int>();
+            for (int i = 0; i < cols; i++) colOrder.Add(i);
+            colOrder.Sort((a, b) => Math.Abs(cols / 2 - a).CompareTo(Math.Abs(cols / 2 - b)));
+
+            foreach (int c in colOrder)
+            {
+                if (board[0, c] == " ")
+                {
+                    DropTokenInColumn(c, "O");
+                    int score = Minimax(MAX_DEPTH, int.MinValue, int.MaxValue, false);
+                    UndoTokenInColumn(c);
+
+                    if (score > bestScore)
+                    {
+                        bestScore = score;
+                        bestMove = c;
+                    }
+                }
+            }
+            return bestMove;
+        }
+
+        static int Minimax(int depth, int alpha, int beta, bool isMaximizing)
+        {
+            if (CheckWin()) return isMaximizing ? -10000 - depth : 10000 + depth; // Prefer quicker wins / delayed losses
+            if (CheckDraw() || depth == 0) return EvaluateBoard();
+
+            int cols = board.GetLength(1);
+
+            if (isMaximizing)
+            {
+                int maxEval = int.MinValue;
+                for (int c = 0; c < cols; c++)
+                {
+                    if (board[0, c] == " ")
+                    {
+                        DropTokenInColumn(c, "O");
+                        int eval = Minimax(depth - 1, alpha, beta, false);
+                        UndoTokenInColumn(c);
+                        maxEval = Math.Max(maxEval, eval);
+                        alpha = Math.Max(alpha, eval);
+                        if (beta <= alpha) break; // Beta Pruning
+                    }
+                }
+                return maxEval;
+            }
+            else
+            {
+                int minEval = int.MaxValue;
+                for (int c = 0; c < cols; c++)
+                {
+                    if (board[0, c] == " ")
+                    {
+                        DropTokenInColumn(c, "X");
+                        int eval = Minimax(depth - 1, alpha, beta, true);
+                        UndoTokenInColumn(c);
+                        minEval = Math.Min(minEval, eval);
+                        beta = Math.Min(beta, eval);
+                        if (beta <= alpha) break; // Alpha Pruning
+                    }
+                }
+                return minEval;
+            }
+        }
+
+        // Evaluates the current board state dynamically (scoring positioning)
+        static int EvaluateBoard()
+        {
+            int score = 0;
+            int rows = board.GetLength(0);
+            int cols = board.GetLength(1);
+            int midCol = cols / 2;
+
+            // Prioritize center control
+            for (int r = 0; r < rows; r++)
+            {
+                if (board[r, midCol] == "O") score += 3;
+                else if (board[r, midCol] == "X") score -= 3;
+            }
+
+            // Simple line assessment heuristics
+            score += ScoreWindows("O") - ScoreWindows("X");
+            return score;
+        }
+
+        static int ScoreWindows(string token)
+        {
+            int score = 0;
+            int rows = board.GetLength(0);
+            int cols = board.GetLength(1);
+
+            // Row checking for structural advantages (3 in a row open, 2 in a row open)
+            for (int r = 0; r < rows; r++)
+            {
+                for (int c = 0; c < cols - 3; c++)
+                {
+                    int count = 0; int empty = 0;
+                    for (int i = 0; i < 4; i++)
+                    {
+                        if (board[r, c + i] == token) count++;
+                        else if (board[r, c + i] == " ") empty++;
+                    }
+                    if (count == 3 && empty == 1) score += 50;
+                    else if (count == 2 && empty == 2) score += 10;
+                }
+            }
+
+            // Column checking
+            for (int c = 0; c < cols; c++)
+            {
+                for (int r = 0; r < rows - 3; r++)
+                {
+                    int count = 0; int empty = 0;
+                    for (int i = 0; i < 4; i++)
+                    {
+                        if (board[r + i, c] == token) count++;
+                        else if (board[r + i, c] == " ") empty++;
+                    }
+                    if (count == 3 && empty == 1) score += 50;
+                    else if (count == 2 && empty == 2) score += 10;
+                }
+            }
+
+            return score;
         }
 
         static void DropTokenInColumn(int col, string token)
@@ -130,82 +218,6 @@ namespace ConnectFour
             }
         }
 
-        private static int GetBestMove(string stateKey)
-        {
-            int cols = board.GetLength(1);
-
-            // --- 1. LOOKAHEAD BRAIN (Look for immediate wins/blocks) ---
-            // Can AI (Player 2, "O") win on this exact turn?
-            for (int c = 0; c < cols; c++)
-            {
-                if (board[0, c] == " ")
-                {
-                    DropTokenInColumn(c, "O");
-                    bool isWin = CheckWin();
-                    UndoTokenInColumn(c);
-                    if (isWin) return c;
-                }
-            }
-
-            // Can Human (Player 1, "X") win on their next turn? Block them!
-            for (int c = 0; c < cols; c++)
-            {
-                if (board[0, c] == " ")
-                {
-                    DropTokenInColumn(c, "X");
-                    bool isWin = CheckWin();
-                    UndoTokenInColumn(c);
-                    if (isWin) return c;
-                }
-            }
-
-            // --- 2. Q-TABLE BRAIN (Fall back to trained database) ---
-            double bestScore = double.MinValue;
-            List<int> bestMoves = new List<int>();
-
-            for (int i = 0; i < qTable[stateKey].Length; i++)
-            {
-                if (qTable[stateKey][i] > bestScore)
-                {
-                    bestScore = qTable[stateKey][i];
-                    bestMoves.Clear();
-                    bestMoves.Add(i);
-                }
-                else if (qTable[stateKey][i] == bestScore)
-                {
-                    bestMoves.Add(i);
-                }
-            }
-
-            Random r = new Random();
-            return bestMoves[r.Next(0, bestMoves.Count)];
-        }
-
-        static string GetStateKey()
-        {
-            // Using a StringBuilder here dramatically speeds up execution time
-            var sb = new System.Text.StringBuilder();
-            int rows = board.GetLength(0);
-            int cols = board.GetLength(1);
-
-            for (int i = 0; i < rows; i++)
-            {
-                for (int j = 0; j < cols; j++)
-                {
-                    sb.Append(board[i, j]);
-                }
-            }
-
-            string stateKey = sb.ToString();
-
-            if (!qTable.ContainsKey(stateKey))
-            {
-                qTable[stateKey] = new double[cols];
-            }
-
-            return stateKey;
-        }
-
         private static bool CheckWin()
         {
             int rows = board.GetLength(0);
@@ -217,16 +229,12 @@ namespace ConnectFour
                 {
                     if (board[i, j] == " ") continue;
 
-                    // Horizontal
                     if (j + 3 < cols && board[i, j] == board[i, j + 1] && board[i, j + 1] == board[i, j + 2] && board[i, j + 2] == board[i, j + 3])
                         return true;
-                    // Vertical
                     if (i + 3 < rows && board[i, j] == board[i + 1, j] && board[i + 1, j] == board[i + 2, j] && board[i + 2, j] == board[i + 3, j])
                         return true;
-                    // Diagonal Down-Right
                     if (i + 3 < rows && j + 3 < cols && board[i, j] == board[i + 1, j + 1] && board[i + 1, j + 1] == board[i + 2, j + 2] && board[i + 2, j + 2] == board[i + 3, j + 3])
                         return true;
-                    // Diagonal Up-Right
                     if (i - 3 >= 0 && j + 3 < cols && board[i, j] == board[i - 1, j + 1] && board[i - 1, j + 1] == board[i - 2, j + 2] && board[i - 2, j + 2] == board[i - 3, j + 3])
                         return true;
                 }
@@ -255,52 +263,6 @@ namespace ConnectFour
             }
         }
 
-        static void PlayAgainstHuman()
-        {
-            bool win = false;
-            bool draw = false;
-
-            DisplayLogo();
-
-            while (!win && !draw)
-            {
-                DisplayBoard(board.GetLength(0), board.GetLength(1));
-
-                if (playerTurn == 1)
-                {
-                    // Human Turn
-                    GetInputAndPlacePiece();
-                }
-                else
-                {
-                    // AI Turn (Player 2)
-                    Console.WriteLine("AI is calculating its move...");
-                    Thread.Sleep(800);
-
-                    string stateKey = GetStateKey();
-                    int aiMove = GetBestMove(stateKey);
-
-                    // Extra emergency fallback if column happens to be filled
-                    if (board[0, aiMove] != " ")
-                    {
-                        for (int c = 0; c < board.GetLength(1); c++)
-                        {
-                            if (board[0, c] == " ") { aiMove = c; break; }
-                        }
-                    }
-
-                    DropTokenInColumn(aiMove, "O");
-                    playerTurn = 1; // Hand control back to human
-                }
-
-                win = CheckWin();
-                draw = CheckDraw();
-            }
-
-            DisplayBoard(board.GetLength(0), board.GetLength(1));
-            PrintEndMessage(win, draw);
-        }
-
         static void DisplayLogo()
         {
             Console.Clear();
@@ -323,8 +285,6 @@ namespace ConnectFour
             int cols = GetValidInput();
             PrintSuccess();
 
-            Console.Write("Game system preparing...");
-            Thread.Sleep(1500);
             InitializeBoard(rows, cols);
         }
 
@@ -430,7 +390,6 @@ namespace ConnectFour
             Console.Clear();
             if (win)
             {
-                // Note: Turn switches right after slotting a token.
                 if (playerTurn == 2)
                 {
                     Console.ForegroundColor = ConsoleColor.Green;
