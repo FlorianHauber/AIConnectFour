@@ -11,7 +11,7 @@ namespace ConnectFour
         public const int MAX_SIZE = 10;
         static int playerTurn = 1;
 
-        // Higher depth = smarter AI, but takes longer to think. 5-6 is perfect for console.
+        // Higher depth = smarter AI, but takes longer to think.
         const int MAX_DEPTH = 7;
 
         static void Main(string[] args)
@@ -38,18 +38,16 @@ namespace ConnectFour
 
                 if (playerTurn == 1)
                 {
-                    // Human Turn
                     GetInputAndPlacePiece();
                 }
                 else
                 {
-                    // AI Turn (Player 2)
                     Console.WriteLine("AI is calculating optimal strategy...");
 
                     int aiMove = GetBestMoveLookahead();
 
                     DropTokenInColumn(aiMove, "O");
-                    playerTurn = 1; // Hand control back to human
+                    playerTurn = 1;
                 }
 
                 win = CheckWin();
@@ -60,14 +58,12 @@ namespace ConnectFour
             PrintEndMessage(win, draw);
         }
 
-        // Uses Minimax with Alpha-Beta Pruning to find the best move
         private static int GetBestMoveLookahead()
         {
             int cols = board.GetLength(1);
             int bestMove = 0;
             int bestScore = int.MinValue;
 
-            // Simple heuristic: evaluate middle columns first for massive speed boost in pruning
             List<int> colOrder = new List<int>();
             for (int i = 0; i < cols; i++) colOrder.Add(i);
             colOrder.Sort((a, b) => Math.Abs(cols / 2 - a).CompareTo(Math.Abs(cols / 2 - b)));
@@ -92,7 +88,7 @@ namespace ConnectFour
 
         static int Minimax(int depth, int alpha, int beta, bool isMaximizing)
         {
-            if (CheckWin()) return isMaximizing ? -10000 - depth : 10000 + depth; // Prefer quicker wins / delayed losses
+            if (CheckWin()) return isMaximizing ? -10000 - depth : 10000 + depth;
             if (CheckDraw() || depth == 0) return EvaluateBoard();
 
             int cols = board.GetLength(1);
@@ -109,7 +105,7 @@ namespace ConnectFour
                         UndoTokenInColumn(c);
                         maxEval = Math.Max(maxEval, eval);
                         alpha = Math.Max(alpha, eval);
-                        if (beta <= alpha) break; // Beta Pruning
+                        if (beta <= alpha) break;
                     }
                 }
                 return maxEval;
@@ -126,14 +122,13 @@ namespace ConnectFour
                         UndoTokenInColumn(c);
                         minEval = Math.Min(minEval, eval);
                         beta = Math.Min(beta, eval);
-                        if (beta <= alpha) break; // Alpha Pruning
+                        if (beta <= alpha) break;
                     }
                 }
                 return minEval;
             }
         }
 
-        // Evaluates the current board state dynamically (scoring positioning)
         static int EvaluateBoard()
         {
             int score = 0;
@@ -141,14 +136,12 @@ namespace ConnectFour
             int cols = board.GetLength(1);
             int midCol = cols / 2;
 
-            // Prioritize center control
             for (int r = 0; r < rows; r++)
             {
                 if (board[r, midCol] == "O") score += 3;
                 else if (board[r, midCol] == "X") score -= 3;
             }
 
-            // Simple line assessment heuristics
             score += ScoreWindows("O") - ScoreWindows("X");
             return score;
         }
@@ -159,7 +152,6 @@ namespace ConnectFour
             int rows = board.GetLength(0);
             int cols = board.GetLength(1);
 
-            // Row checking for structural advantages (3 in a row open, 2 in a row open)
             for (int r = 0; r < rows; r++)
             {
                 for (int c = 0; c < cols - 3; c++)
@@ -175,7 +167,6 @@ namespace ConnectFour
                 }
             }
 
-            // Column checking
             for (int c = 0; c < cols; c++)
             {
                 for (int r = 0; r < rows - 3; r++)
@@ -366,7 +357,7 @@ namespace ConnectFour
                     if (board[0, chosenColumn - 1] == " ")
                     {
                         DropTokenInColumn(chosenColumn - 1, "X");
-                        playerTurn = 2; // Switch to AI
+                        playerTurn = 2;
                         break;
                     }
                     else
