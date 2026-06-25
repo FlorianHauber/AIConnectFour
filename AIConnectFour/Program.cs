@@ -25,7 +25,7 @@ namespace ConnectFour
 
             Console.WriteLine("AI is training a few games ... please wait");
 
-            for (int i = 0; i < 100000; i++)
+            for (int i = 0; i < 10000000; i++)
             {
                 TrainAI();
             }
