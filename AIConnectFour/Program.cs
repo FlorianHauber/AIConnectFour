@@ -231,19 +231,47 @@ namespace ConnectFour
             bool win = false;
             bool draw = false;
 
-            DisplayLogo(); //displays the logo and waits for the user to press a key before starting the game
+            DisplayLogo();
 
             while (!win && !draw)
             {
-                DisplayBoard(board.GetLength(0), board.GetLength(1)); //displays the current state of the board with the specified number of rows and columns and the pieces that have been placed on the board
-                GetInputAndPlacePiece(); //asks the current player for the column they want to place their piece in, validates the input, and places the piece on the board
-                win = CheckForWin(); //checks if the current player has won the game by checking for four in a row horizontally, vertically, diagonally, or anti-diagonally
-                draw = CheckForDraw(); //checks if the board is full and no one has won, which would result in a draw
+                DisplayBoard(board.GetLength(0), board.GetLength(1));
+
+                if (playerTurn == 1)
+                {
+                    // Human Turn
+                    GetInputAndPlacePiece();
+                }
+                else
+                {
+                    // AI Turn
+                    Console.WriteLine("AI is thinking...");
+                    Thread.Sleep(600); // Small delay so the human can see what's happening
+
+                    string stateKey = GetStateKey();
+                    int aiMove = GetBestMove(stateKey);
+
+                    // Fallback if the AI accidentally picks a full column
+                    if (board[0, aiMove] != " ")
+                    {
+                        for (int c = 0; c < board.GetLength(1); c++)
+                        {
+                            if (board[0, c] == " ") { aiMove = c; break; }
+                        }
+                    }
+
+                    // Drop AI token (Player 2 is "O")
+                    PlaceStoneOnBoard(aiMove + 1); // +1 because PlaceStoneOnBoard subtracts 1 internally
+                }
+
+                win = CheckForWin();
+                draw = CheckForDraw();
             }
 
-            DisplayBoard(board.GetLength(0), board.GetLength(1)); //displays the final state of the board after the game has ended
-            PrintEndMessage(win, draw); //prints a message indicating which player won or if the game ended in a draw, and waits for the user to press a key before exiting the program
+            DisplayBoard(board.GetLength(0), board.GetLength(1));
+            PrintEndMessage(win, draw);
         }
+
         static void DisplayLogo()
         {
             char dummy = '\0';
