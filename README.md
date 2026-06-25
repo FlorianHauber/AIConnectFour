@@ -6,3 +6,6 @@ This is a classic game of connect four where you play against some sort of AI. T
 
 **for the MAX_DEPTH i would recommend something from 5-7 for good gameplay but not thinking too long**
 
+## Downloading
+---
+If you want to download this repo just download the .zip file unpack it and run it (Dotnet version 10.0). And you should be good to go
