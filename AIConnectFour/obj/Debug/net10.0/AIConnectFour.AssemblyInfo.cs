@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("AIConnectFour")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ed69d180b3e11ff6b7b51353a0f3fd90a4096fc4")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+bef810cf5ea24cbf35cf28f8b30961519fa0aa77")]
 [assembly: System.Reflection.AssemblyProductAttribute("AIConnectFour")]
 [assembly: System.Reflection.AssemblyTitleAttribute("AIConnectFour")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
