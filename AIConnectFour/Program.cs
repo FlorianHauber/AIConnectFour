@@ -256,18 +256,18 @@ namespace ConnectFour
 
         static void DisplayLogo()
         {
-            Console.Clear();
+            Console.Write("\x1b[2J\x1b[H");
             Console.WriteLine("========================");
             Console.WriteLine("Welcome to Connect Four!");
             Console.WriteLine("========================");
             Console.Write("\nPress any key to start the match... ");
             Console.ReadKey();
-            Console.Clear();
+            Console.Write("\x1b[2J\x1b[H");
         }
 
         static void AskForBoardSize()
         {
-            Console.Clear();
+            Console.Write("\x1b[2J\x1b[H");
             Console.Write("Enter number of rows (4-10): ");
             int rows = GetValidInput();
             PrintSuccess();
@@ -309,7 +309,7 @@ namespace ConnectFour
 
         static void DisplayBoard(int rows, int cols)
         {
-            Console.Clear();
+            Console.Write("\x1b[2J\x1b[H");
             for (int i = 0; i < cols; i++)
             {
                 Console.Write("  " + (i + 1) + " ");
@@ -378,7 +378,7 @@ namespace ConnectFour
 
         static void PrintEndMessage(bool win, bool draw)
         {
-            Console.Clear();
+            Console.Write("\x1b[2J\x1b[H");
             if (win)
             {
                 if (playerTurn == 2)
